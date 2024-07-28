@@ -1,0 +1,9 @@
+name: maven-actions
+on: push
+jobs:
+  confirm_build_passes:
+  runs-on: ubuntu-latest
+  steps:
+     - name: Perform Java build on Linux
+       run: cd java && mvn package
+
