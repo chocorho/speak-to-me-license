@@ -7,5 +7,7 @@ jobs:
        - name: Perform Java build on Linux
          run: |
            sudo apt-get install -y openjdk-8-jdk maven
-           cd /home/runner/work/speak-to-me-license/java && mvn package
+           pwd
+           ls -Ato
+           ls /home/runner/work/speak-to-me-license/ && mvn package
 
