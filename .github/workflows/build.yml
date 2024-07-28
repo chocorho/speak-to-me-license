@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
        - name: Perform Java build on Linux
-         run: apt-get install openjdk-8-jdk
-         run: cd java && mvn package
+         run: |
+           apt-get install openjdk-8-jdk
+           cd java && mvn package
 
