@@ -1,124 +1,204 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>chozorho</groupId>
+
+  <groupId>com.themathjester</groupId>
   <artifactId>STM-DRM-Client</artifactId>
-  <name>Finances-Parser</name>
   <version>1.1-SNAPSHOT</version>
-  <url>http://www.example.com</url>
-  <build>
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-      </resource>
-    </resources>
-    <plugins>
-      <plugin>
-        <artifactId>maven-clean-plugin</artifactId>
-        <version>3.1.0</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.0.2</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.1</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.0.2</version>
-        <configuration>
-          <archive>
-            <manifest>
-              <addClasspath>true</addClasspath>
-              <mainClass>chozorho.ExecuteDemo</mainClass>
-            </manifest>
-          </archive>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-install-plugin</artifactId>
-        <version>2.5.2</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.8.2</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>3.7.1</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>3.0.0</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.4.1</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <artifactSet>
-            <includes>
-              <include>chozorho:Finances-Parser</include>
-              <include>org.seleniumhq.selenium:selenium-java</include>
-              <include>org.seleniumhq.selenium:selenium-firefox-driver</include>
-              <include>org.seleniumhq.selenium:selenium-api</include>
-              <include>org.seleniumhq.selenium:selenium-remote-driver</include>
-              <include>com.google.guava:guava</include>
-              <include>com.squareup.okhttp3:okhttp</include>
-              <include>com.squareup.okio:okio</include>
-              <include>org.apache.commons:commons-exec</include>
-              <include>commons-logging:commons-logging</include>
-              <include>org.bouncycastle:bcpg-jdk18on</include>
-              <include>org.bouncycastle:bcprov-jdk18on</include>
-            </includes>
-            <excludes>
-              <exclude>META-INF/*SF</exclude>
-              <exclude>junit:junit</exclude>
-              <exclude>org.apache.maven:lib:tests</exclude>
-            </excludes>
-          </artifactSet>
-          <transformers>
-            <transformer>
-              <manifestEntries>
-                <mainClass>chozorho.ExecuteDemo</mainClass>
-                <finallyheleaves>true</finallyheleaves>
-              </manifestEntries>
-            </transformer>
-          </transformers>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+
+  <name>Speak-To-Me-DRM-Demo</name>
+  <url>http://www.themathjester.com</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.12</version>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>hamcrest-core</artifactId>
-          <groupId>org.hamcrest</groupId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>4.0.0-alpha-1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-firefox-driver</artifactId>
+      <version>4.0.0-alpha-1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-remote-driver</artifactId>
+      <version>4.0.0-alpha-1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpg-jdk18on</artifactId>
+      <version>1.71</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <version>1.71</version>
     </dependency>
   </dependencies>
-  <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.target>1.8</maven.compiler.target>
-  </properties>
+
+  <build>
+    <!-- <pluginManagement>< ! - - lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+    <!-- apparently I need to comment-out pluginManagement! See https://stackoverflow.com/a/42231035 -->
+      <plugins>
+        <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+        <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+        <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.0.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.8.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.22.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.0.2</version>
+          <configuration>
+            <archive>
+              <manifest>
+                <addClasspath>true</addClasspath>
+                <mainClass>chozorho.ExecuteDemo</mainClass>
+              </manifest>
+            </archive>
+          </configuration>
+        </plugin>
+        <plugin>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.5.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>2.8.2</version>
+        </plugin>
+        <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
+        <plugin>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>3.7.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-project-info-reports-plugin</artifactId>
+          <version>3.0.0</version>
+        </plugin>
+<!--        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.4.1</version>
+          <configuration>
+            < !  - - get all project dependencies - - >
+            <descriptorRefs>
+              <descriptorRef>jar-with-dependencies</descriptorRef>
+            </descriptorRefs>
+            <!- - MainClass in mainfest make a executable jar - ->
+            <archive>
+              <manifest>
+                <mainClass>chozorho.ExecuteParseFinance</mainClass>
+              </manifest>
+            </archive>
+          </configuration>
+          <executions>
+            <execution>
+            <id>make-assembly</id>
+            <! - - bind to the packaging phase - - >
+            <phase>package</phase> 
+            <goals>
+              <goal>single</goal>
+            </goals>
+            </execution>
+          </executions>
+        </plugin> -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.4.1</version>
+          <configuration>
+            <artifactSet>
+              <includes>
+<!--                <include>com.themathjester:ExecuteDrm</include> -->
+<!--                <include>com.themathjester:ExecuteDemo</include> -->
+
+                <!-- selenium dependencies, painstakingly discovered -->
+                <include>org.seleniumhq.selenium:selenium-java</include>
+                <include>org.seleniumhq.selenium:selenium-os</include>
+                <include>org.seleniumhq.selenium:selenium-firefox-driver</include>
+                <include>org.seleniumhq.selenium:selenium-api</include>
+                <include>org.seleniumhq.selenium:selenium-remote-driver</include>
+                <include>org.seleniumhq.selenium:selenium-http</include> <!-- do we need it here? Evidently yes! -->
+                <include>dev.failsafe:failsafe</include>
+                <include>org.seleniumhq.selenium:selenium-json</include> <!-- do we need it here? Evidently yes! -->
+                <include>org.seleniumhq.selenium:selenium-manager</include> <!-- do we need it here? Evidently yes! -->
+                <include>com.google.guava:guava</include>
+
+                <include>com.squareup.okhttp3:okhttp</include>
+                <include>com.squareup.okio:okio</include>
+
+                <include>org.apache.commons:commons-exec</include>
+                <include>commons-logging:commons-logging</include>
+
+                <!-- bouncycastle dependencies, painstakingly discovered -->
+                <include>org.bouncycastle:bcpg-jdk18on</include>
+                <include>org.bouncycastle:bcprov-jdk18on</include>
+                <include>org.bouncycastle:bcutil-jdk18on</include>
+              </includes>
+              <excludes>
+                <exclude>junit:junit</exclude>
+                <exclude>org.apache.maven:lib:tests</exclude>
+              </excludes>
+            </artifactSet>
+<!--            <minimizeJar>true</minimizeJar> --> <!-- NUNCA JAMAS! -->
+            <filters>
+              <filter>
+                <artifact>*:*</artifact>
+                <excludes>
+                  <exclude>META-INF/*.SF</exclude>
+                  <exclude>META-INF/*.DSA</exclude>
+                  <exclude>META-INF/*.RSA</exclude>
+                </excludes>
+              </filter>
+            </filters>
+            <transformers>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                <manifestEntries>
+                  <mainClass>com.themathjester.ExecuteJarEntry</mainClass>
+                </manifestEntries>
+              </transformer>
+            </transformers>
+          </configuration>
+          <executions>
+            <execution>
+              <phase>package</phase>
+              <goals><goal>shade</goal></goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+<!--    </pluginManagement> -->
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
+  </build>
 </project>
