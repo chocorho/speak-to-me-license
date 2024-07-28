@@ -6,6 +6,6 @@ jobs:
     steps:
        - name: Perform Java build on Linux
          run: |
-           apt-get install openjdk-8-jdk
+           sudo apt-get install -y openjdk-8-jdk maven
            cd java && mvn package
 
