@@ -59,11 +59,74 @@ import org.openqa.selenium.WebElement;
 public class ExecuteDemo
 {
 
+  private static final String VERSION_STR="1.2-PROOF-OF-CONCEPT";
+  private static final String PUBLIC_KEY_FILENAME = "example.key";
+
   
   public static void main(String[] args)
   {
 /*    HttpClientBuilder authenticatorBuilder = HttpClientBuilder.getInstance();*/
-    
+
+    /* Offer different modes, allowing the user to create a new RSA keypair from
+     *  the same client! */
+    System.out.println("Welcome to the STM DRM Client, version "+VERSION_STR);
+    System.out.println(" ");
+    System.out.println("As of August 2024, this program comes with options for convenience to the user.");
+    System.out.println(" ");
+    System.out.println("    0. generate a new RSA Key Pair (this is typically the first step to unlocking the DRM)");
+    System.out.println(" ");
+    System.out.println("    1. use binary signatures (v 1.0) to confirm receipt of the Public Key");
+    System.out.println(" ");
+    System.out.println("    2. test encryption (v 2.0) to confirm receipt of the Public Key (unavailable)");
+    System.out.println(" ");
+    System.out.print("  Enter your choice: ");
+    Scanner stdin = new Scanner(System.in);
+    int choice = Integer.parseInt(stdin.nextLine());
+
+    switch (choice) {
+      case 0:
+        System.out.println("Generating a new RSA Key Pair...");
+        ExecuteDrm.readRsaKey(PUBLIC_KEY_FILENAME);
+        break;
+      case 1:
+        System.out.println("Using binary signatures to verify identity...");
+        uploadBinarySignature(stdin);
+        break;
+      case 2:
+        testEncryption(stdin);
+        break;
+      default:
+        System.out.println("Please enter a valid integer.");
+        break;
+    }
+    System.out.println("Program terminated.");
+  }
+
+  private static void testEncryption(Scanner input) {
+    try {
+      // For now, I hard-code the filename 
+      // and read the bytes of Computation.class.gpg
+      String ciphertextFile = "Computations.class.gpg";
+      //System.out.println("");
+      //String ciphertextFile = input.nextLine();
+
+      System.out.println("Ah, wise guy, eh? What's the password then?");
+      System.out.print("> ");
+      String passwordGuess = input.nextLine();
+
+      System.out.println("And the initialization vector?");
+      System.out.print("> ");
+      String initVectorGuess = input.nextLine();
+
+      ExecuteDrm.testAes();
+      // TODO: convert the file contents to bytes... presumably.
+      //byte[] ct = ExecuteDrm.encryptPayload(ciphertextFile, passwordGuess, initVectorGuess);
+    } catch (Exception error) {
+        error.printStackTrace();
+    }
+  }
+
+  private static void uploadBinarySignature(Scanner input) {
     FirefoxOptions customGeckoOpt = new FirefoxOptions();
     customGeckoOpt.addArguments("--headless");
     
@@ -81,7 +144,6 @@ public class ExecuteDemo
     System.out.println(codeval);
     Calendar today_date = Calendar.getInstance();
     Date timestamp = today_date.getTime();
-    Scanner input = new Scanner(System.in);
     System.out.println("Please enter the location of YOUR private key (this is secret!)");
     System.out.print("> ");
     String privateKeyFileName = input.nextLine();
@@ -219,7 +281,6 @@ public class ExecuteDemo
       return;
     }
     browser.close();
-    System.out.println("Program terminated.");
   }
 }
 
