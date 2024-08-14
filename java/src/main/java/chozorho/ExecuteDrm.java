@@ -10,6 +10,8 @@ package chozorho;
 
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.bcpg.BCPGOutputStream;
+import org.bouncycastle.bcpg.BCPGInputStream;
+import org.bouncycastle.bcpg.RSAPublicBCPGKey;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -30,26 +32,45 @@ import org.bouncycastle.openpgp.PGPLiteralData;
 import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.openpgp.PGPPublicKeyRing;
+import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
 import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
 import org.bouncycastle.openpgp.PGPSecretKeyRingCollection;
 import org.bouncycastle.openpgp.PGPSignatureSubpacketGenerator;
 import org.bouncycastle.openpgp.PGPUtil;
+import org.bouncycastle.util.encoders.Hex;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
+import java.security.Security;
+import java.security.KeyPair;
+import java.security.interfaces.RSAPublicKey;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.spec.RSAKeyGenParameterSpec;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.InvalidAlgorithmParameterException;
 
+import java.util.Arrays;
 import java.util.Iterator;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.spec.IvParameterSpec;
 
 
 public class ExecuteDrm {
 
-  //static {
-  //  Security.addProvider(new BouncyCastleProvider());
-  //}
+  static {
+    Security.addProvider(new BouncyCastleProvider());
+  }
 
   /* Method Adapted From Gerald Joshua, under the Apache 2 License */
   public static PGPPrivateKey readSecretKey(String filePath, String pPhrase) throws IOException, PGPException {
@@ -82,7 +103,33 @@ public class ExecuteDrm {
       }
     }
 
-    throw new IllegalArgumentException("Can't find signing key in key ring.");
+    throw new IllegalArgumentException("Unable to find signing key in the given keyring!");
+  }
+
+  /**
+   * readPublicKey
+   * I am literally putting this utility here for testing purposes only, to
+   * retrieve reasonable exponent and modulus values for a public PGP key; I do
+   * not intend to include it in the final product;
+   */
+  public static PGPPublicKey readPublicKey(String filePath) throws IOException, PGPException {
+    FileInputStream in = new FileInputStream(filePath);
+    PGPPublicKeyRingCollection pgpRings = new PGPPublicKeyRingCollection(in, new JcaKeyFingerprintCalculator());
+
+    Iterator keyRingIter = pgpRings.getKeyRings();
+    while (keyRingIter.hasNext()) {
+      PGPPublicKeyRing keyRing = (PGPPublicKeyRing)keyRingIter.next();
+
+      Iterator keyIter = keyRing.getPublicKeys();
+      while (keyIter.hasNext()) {
+        PGPPublicKey key = (PGPPublicKey)keyIter.next();
+
+        if (key.isEncryptionKey()) {
+          return key;
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -160,6 +207,155 @@ public class ExecuteDrm {
     {
       out.close();
     }
+  }
+
+  /**
+   * testAes
+   * "A simple example of AES in CBC mode with block aligned padding."
+   * This example function is a mere test, to be removed later.
+   * It comes directly from Java Cryptography: Tools and Techniques.
+   */
+  public static void testAes() throws Exception {
+    byte[] keyBytes = Hex.decode("000102030405060708090a0b0c0d0e0f");
+    SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+
+    Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
+
+    byte[] input = Hex.decode("a0a1a2a3a4a5a6a7a0a1a2a3a4a5a6a7"
+                            + "a0a1a2a3a4a5a6a7a0");
+    System.out.println("input : " + Hex.toHexString(input));
+
+    byte[] iv = Hex.decode("9f741fdb5d8845bdb48a94394e84f8a3");
+    cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
+
+    byte[] output = cipher.doFinal(input);
+    System.out.println("encrypted: " + Hex.toHexString(output));
+
+    cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
+
+    byte[] finalOutput = new byte[cipher.getOutputSize(output.length)];
+    int len = cipher.update(output, 0, output.length, finalOutput, 0);
+    len += cipher.doFinal(finalOutput, len);
+    System.out.println("decrypted: "
+                       + Hex.toHexString(Arrays.copyOfRange(finalOutput, 0, len)));
+  }
+
+  /**
+   * encryptPayload
+   * This is something I wish to run at the END of every "Payload execution"
+   * event.
+   * There will be times when I need the program to "re-mangle" the Payload à la
+   * WannaCry, in order to incentivize the user to Speak To Me again.
+   * @param payloadPlaintext the bytes of the plaintext file, which I expect to
+   *                         be a .class Java bytecode file extracted from the
+   *                         very JAR file that is currently running (pretty
+   *                         cool, huh?). However, in general, it could really
+   *                         be any plaintext byte array you wish to feed to
+   *                         the cipher.
+   * @param rpgFlag the symmetric key to be used, which I expect to be a short
+   *                sentence that the user uncovers individually as a reward for
+   *                Speaking To Me.
+   * @param initVector a secondary key that is needed in order for  CBC
+   *                   (cipher-block-chaining) to work. I intend treat this as
+   *                   another fun little password that is randomly-generated
+   *                   and therefore beyond my control.
+   */
+  public static byte[] encryptPayload(byte[] payloadPlaintext, String rpgFlag, String initVector) throws Exception {
+    byte[] keyBytes = Hex.decode(rpgFlag);
+    SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+    
+    Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
+    
+    // TODO: consider generating a random Initialization Vector...
+    // or use the one provided, which could come directly from themathjester server!
+    byte[] iv = Hex.decode(initVector);
+    
+    cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
+    return cipher.doFinal(payloadPlaintext);
+  }
+
+  /**
+   * decryptPayload
+   * This is something I wish to run at the START of any "Payload execution"
+   * event.
+   * The program needs to "unmangle" the Payload in order to run it!
+   *
+   * @param payloadPlaintext the bytes of the plaintext file, which I expect to
+   *                         be a .class Java bytecode file extracted from the
+   *                         very JAR file that is currently running (pretty
+   *                         cool, huh?). However, in general, it could really
+   *                         be any plaintext byte array you wish to feed to
+   *                         the cipher.
+   * @param rpgFlag the symmetric key to be used, which I expect to be a short
+   *                sentence that the user uncovers individually as a reward for
+   *                Speaking To Me.
+   * @param initVector a secondary key that is needed in order for  CBC
+   *                   (cipher-block-chaining) to work. I intend treat this as
+   *                   another fun little password that is randomly-generated
+   *                   and therefore beyond my control.
+   */
+  public static byte[] decryptPayload(byte[] payloadPlaintext, String rpgFlag, String initVector) throws Exception {
+    byte[] keyBytes = Hex.decode(rpgFlag);
+    SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+    
+    Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
+    byte[] iv = Hex.decode(initVector);
+    
+    cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
+    byte[] finalOutput = new byte[cipher.getOutputSize(payloadPlaintext.length)];
+    int len = cipher.update(finalOutput, 0, finalOutput.length, finalOutput, 0);
+    len += cipher.doFinal(finalOutput, len);
+    
+    return finalOutput;
+  }
+
+  /**
+   * readRsaKey
+   * A demo to help me extract exponent data in order to do Key Generation.
+   * @param privateKeyFilename the filename of the Private Key, with which to
+                               extract a Public Key.
+   * @return data about the corresponding Public Key.
+   */
+  public static BigInteger readRsaKey(String publicKeyFilename/*, String pPhrase*/) {
+    try {
+      // FIXME this implementation has runtime errors!!!
+      // the traditional way of getting the public key is as follows:
+      //PGPPublicKey pgpPrivKey = readPublicKey(publicKeyFilename);
+      // however, this OpenPGP type does not inherit from RSAPublicKey and thus does not provide
+      // .getPublicExponent() or .getModulus()
+      RSAPublicBCPGKey pk = new RSAPublicBCPGKey(new BCPGInputStream(new FileInputStream(publicKeyFilename)));
+      System.out.println("Key exponent looks like " + pk.getPublicExponent() + "; modulus is " + pk.getModulus());
+      return pk.getPublicExponent();
+    } catch (FileNotFoundException exc) {
+      System.out.println("Requested public key File cannot be found!");
+      exc.printStackTrace();
+    } catch (IOException exc) {
+      System.out.println("IO exception... can we not read any files? Does the directory not exist?");
+      exc.printStackTrace();
+    }
+    return null;
+  }
+
+  /**
+   * createNewRsaKey
+   * The back-end implementation of Mode 0, the creation of a new valid RSA Key Pair.
+   */
+  public static KeyPair createNewRsaKey() {
+    try {
+      KeyPairGenerator k = KeyPairGenerator.getInstance("RSA", "BC");
+      k.initialize(new RSAKeyGenParameterSpec(3072, RSAKeyGenParameterSpec.F4));
+      return k.generateKeyPair();
+    } catch (NoSuchProviderException exc) {
+      System.out.println("Provider, presumably BouncyCastle, cannot be found!");
+      exc.printStackTrace();
+    } catch (NoSuchAlgorithmException exc) {
+      System.out.println("Algorithm, presumably RSA, cannot be found!");
+      exc.printStackTrace();
+    } catch (InvalidAlgorithmParameterException exc2) {
+      System.out.println("Algorithm Parameter, presumably the bit length or the exponent 65537, cannot be used!");
+      exc2.printStackTrace();
+    }
+    return null;
   }
 
 }
