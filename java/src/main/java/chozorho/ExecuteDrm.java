@@ -1,12 +1,14 @@
-/*
-
-
-https://github.com/bcgit/bc-java/blob/master/pg/src/main/java/org/bouncycastle/openpgp/examples/SignedFileProcessor.java
-
+/* Copyright (c) 2024 chozorho
+ * 
+ * ExecuteDrm
+ * A utility class for all the fundamental cryptographic methods used in my DRM scheme.
+ * Sources of inspiration include the OpenPGP Examples provided in BouncyCastle repos:
+ * https://github.com/bcgit/bc-java/blob/master/pg/src/main/java/org/bouncycastle/openpgp/examples/SignedFileProcessor.java
+ * https://github.com/bcgit/bc-java/blob/main/pg/src/main/java/org/bouncycastle/openpgp/examples/RSAKeyPairGenerator.java
+ *
  */
 
 package chozorho;
-
 
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.bcpg.BCPGOutputStream;
@@ -21,13 +23,26 @@ import org.bouncycastle.openpgp.PGPSignatureList;
 
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
+import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
+import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
+
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
+import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
+
+import org.bouncycastle.bcpg.CompressionAlgorithmTags;
+import org.bouncycastle.bcpg.HashAlgorithmTags;
+import org.bouncycastle.bcpg.PublicKeyAlgorithmTags;
+import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags;
+import org.bouncycastle.bcpg.sig.Features;
+import org.bouncycastle.bcpg.sig.KeyFlags;
 
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
 
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
 import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPKeyPair;
+import org.bouncycastle.openpgp.PGPKeyRingGenerator;
 import org.bouncycastle.openpgp.PGPLiteralData;
 import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
 import org.bouncycastle.openpgp.PGPPrivateKey;
@@ -40,6 +55,10 @@ import org.bouncycastle.openpgp.PGPSecretKeyRingCollection;
 import org.bouncycastle.openpgp.PGPSignatureSubpacketGenerator;
 import org.bouncycastle.openpgp.PGPUtil;
 import org.bouncycastle.util.encoders.Hex;
+
+import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
+import org.bouncycastle.openpgp.operator.PGPContentSignerBuilder;
+import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -59,6 +78,9 @@ import java.security.NoSuchProviderException;
 import java.security.InvalidAlgorithmParameterException;
 
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Iterator;
 
 import javax.crypto.Cipher;
@@ -334,6 +356,91 @@ public class ExecuteDrm {
       exc.printStackTrace();
     }
     return null;
+  }
+
+  private static final int SIG_HASH = HashAlgorithmTags.SHA512;
+  private static final int[] HASH_PREFERENCES = new int[]{
+      HashAlgorithmTags.SHA512, HashAlgorithmTags.SHA384, HashAlgorithmTags.SHA256, HashAlgorithmTags.SHA224
+  };
+  private static final int[] SYM_PREFERENCES = new int[]{
+      SymmetricKeyAlgorithmTags.AES_256, SymmetricKeyAlgorithmTags.AES_192, SymmetricKeyAlgorithmTags.AES_128
+  };
+  private static final int[] COMP_PREFERENCES = new int[]{
+      CompressionAlgorithmTags.ZLIB, CompressionAlgorithmTags.BZIP2, CompressionAlgorithmTags.ZLIB, CompressionAlgorithmTags.UNCOMPRESSED
+  };
+
+  public static void generateAndExportKeyRing(
+      OutputStream secretOut,
+      OutputStream publicOut,
+      String identity,
+      char[] passPhrase,
+      boolean armor)
+      throws IOException, NoSuchProviderException, PGPException, NoSuchAlgorithmException
+  {
+    if (armor)
+    {
+      secretOut = new ArmoredOutputStream(secretOut);
+    }
+
+    PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
+    KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
+
+    PGPContentSignerBuilder contentSignerBuilder = new JcaPGPContentSignerBuilder(PublicKeyAlgorithmTags.RSA_GENERAL, SIG_HASH).setProvider("BC");
+    PBESecretKeyEncryptor secretKeyEncryptor = new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC")
+        .build(passPhrase);
+
+    Date now = new Date();
+
+    kpg.initialize(3072);
+    KeyPair primaryKP = kpg.generateKeyPair();
+    PGPKeyPair primaryKey = new JcaPGPKeyPair(PGPPublicKey.RSA_GENERAL, primaryKP, now);
+    PGPSignatureSubpacketGenerator primarySubpackets = new PGPSignatureSubpacketGenerator();
+    primarySubpackets.setKeyFlags(true, KeyFlags.CERTIFY_OTHER);
+    primarySubpackets.setPreferredHashAlgorithms(false, HASH_PREFERENCES);
+    primarySubpackets.setPreferredSymmetricAlgorithms(false, SYM_PREFERENCES);
+    primarySubpackets.setPreferredCompressionAlgorithms(false, COMP_PREFERENCES);
+    primarySubpackets.setFeature(false, Features.FEATURE_MODIFICATION_DETECTION);
+    primarySubpackets.setIssuerFingerprint(false, primaryKey.getPublicKey());
+
+    kpg.initialize(3072);
+    KeyPair signingKP = kpg.generateKeyPair();
+    PGPKeyPair signingKey = new JcaPGPKeyPair(PGPPublicKey.RSA_GENERAL, signingKP, now);
+    PGPSignatureSubpacketGenerator signingKeySubpacket = new PGPSignatureSubpacketGenerator();
+    signingKeySubpacket.setKeyFlags(true, KeyFlags.SIGN_DATA);
+    signingKeySubpacket.setIssuerFingerprint(false, primaryKey.getPublicKey());
+
+    kpg.initialize(3072);
+    KeyPair encryptionKP = kpg.generateKeyPair();
+    PGPKeyPair encryptionKey = new JcaPGPKeyPair(PGPPublicKey.RSA_GENERAL, encryptionKP, now);
+    PGPSignatureSubpacketGenerator encryptionKeySubpackets = new PGPSignatureSubpacketGenerator();
+    encryptionKeySubpackets.setKeyFlags(true, KeyFlags.ENCRYPT_COMMS | KeyFlags.ENCRYPT_STORAGE);
+    encryptionKeySubpackets.setIssuerFingerprint(false, primaryKey.getPublicKey());
+
+    PGPKeyRingGenerator gen = new PGPKeyRingGenerator(PGPSignature.POSITIVE_CERTIFICATION, primaryKey, identity,
+        sha1Calc, primarySubpackets.generate(), null, contentSignerBuilder, secretKeyEncryptor);
+    gen.addSubKey(signingKey, signingKeySubpacket.generate(), null, contentSignerBuilder);
+    gen.addSubKey(encryptionKey, encryptionKeySubpackets.generate(), null);
+
+    PGPSecretKeyRing secretKeys = gen.generateSecretKeyRing();
+    secretKeys.encode(secretOut);
+
+    secretOut.close();
+
+    if (armor)
+    {
+      publicOut = new ArmoredOutputStream(publicOut);
+    }
+
+    List<PGPPublicKey> publicKeyList = new ArrayList<PGPPublicKey>();
+    Iterator<PGPPublicKey> it = secretKeys.getPublicKeys();
+    while (it.hasNext())
+    {
+      publicKeyList.add(it.next());
+    }
+
+    PGPPublicKeyRing publicKeys = new PGPPublicKeyRing(publicKeyList);
+    publicKeys.encode(publicOut);
+    publicOut.close();
   }
 
   /**
