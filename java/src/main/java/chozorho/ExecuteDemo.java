@@ -18,6 +18,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
+import java.security.KeyPair;
+
 import org.bouncycastle.gpg.SExprParser;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
@@ -69,6 +71,7 @@ public class ExecuteDemo
 
     /* Offer different modes, allowing the user to create a new RSA keypair from
      *  the same client! */
+    Scanner stdin = new Scanner(System.in);
     System.out.println("Welcome to the STM DRM Client, version "+VERSION_STR);
     System.out.println(" ");
     System.out.println("As of August 2024, this program comes with options for convenience to the user.");
@@ -79,25 +82,45 @@ public class ExecuteDemo
     System.out.println(" ");
     System.out.println("    2. test encryption (v 2.0) to confirm receipt of the Public Key (unavailable)");
     System.out.println(" ");
-    System.out.print("  Enter your choice: ");
-    Scanner stdin = new Scanner(System.in);
+    System.out.println("    3. exit program");
+    System.out.println(" ");
+    System.out.print("Enter your choice: ");
     int choice = Integer.parseInt(stdin.nextLine());
 
-    switch (choice) {
-      case 0:
-        System.out.println("Generating a new RSA Key Pair...");
-        ExecuteDrm.readRsaKey(PUBLIC_KEY_FILENAME);
-        break;
-      case 1:
-        System.out.println("Using binary signatures to verify identity...");
-        uploadBinarySignature(stdin);
-        break;
-      case 2:
-        testEncryption(stdin);
-        break;
-      default:
-        System.out.println("Please enter a valid integer.");
-        break;
+    while (3 != choice) {
+      switch (choice) {
+        case 0:
+          System.out.println("Generating a new RSA Key Pair...");
+          System.out.print("Enter the name for the new pair: ");
+          String un = stdin.nextLine();
+          System.out.print("Enter your secret passphrase: ");
+          String npp = stdin.nextLine();
+          // attempt 1 (failure):
+          //ExecuteDrm.readRsaKey(PUBLIC_KEY_FILENAME);
+          // attempt 2 (failure):
+          //KeyPair resultF = ExecuteDrm.createNewRsaKey();
+          //resultF.get();
+          try {
+            FileOutputStream pubFile = new FileOutputStream(un+"-PRIVATE-DO-NOT-SHARE.asc");
+            FileOutputStream privFile = new FileOutputStream(un+"-pub.asc");
+            ExecuteDrm.generateAndExportKeyRing(pubFile, privFile, un, npp.toCharArray(), true);
+          } catch (Exception ec) {
+            ec.printStackTrace();
+          }
+          break;
+        case 1:
+          System.out.println("Using binary signatures to verify identity...");
+          uploadBinarySignature(stdin);
+          break;
+        case 2:
+          testEncryption(stdin);
+          break;
+        default:
+          System.out.println("Please enter a valid integer.");
+          break;
+      }
+      System.out.print("Enter your next choice: ");
+      choice = Integer.parseInt(stdin.nextLine());
     }
     System.out.println("Program terminated.");
   }
