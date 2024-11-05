@@ -18,6 +18,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
+import java.util.jar.JarInputStream;
+
 import java.security.KeyPair;
 
 import org.bouncycastle.gpg.SExprParser;
@@ -55,13 +57,16 @@ import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.WebElement;
 /*import org.openqa.selenium.remote.RemoteWebElement;*/
 
+import chozorho.ExecuteDrm;
+import chozorho.JarUtils;
+
 /* NEW IDEA *
  * use Selenium, since it has a simple api and also uses the Apache license!!! */
 
 public class ExecuteDemo
 {
 
-  private static final String VERSION_STR="1.2-PROOF-OF-CONCEPT";
+  private static final String VERSION_STR="1.2-SNAPSHOT";
   private static final String PUBLIC_KEY_FILENAME = "example.key";
 
   
@@ -80,14 +85,16 @@ public class ExecuteDemo
     System.out.println(" ");
     System.out.println("    1. use binary signatures (v 1.0) to confirm receipt of the Public Key");
     System.out.println(" ");
-    System.out.println("    2. test encryption (v 2.0) to confirm receipt of the Public Key (unavailable)");
+    System.out.println("    2. test encryption (v 2.0) to confirm receipt of the Public Key (TBA)");
     System.out.println(" ");
-    System.out.println("    3. exit program");
+    System.out.println("    3. search this JAR file for encrypted data");
+    System.out.println(" ");
+    System.out.println("    4. exit program");
     System.out.println(" ");
     System.out.print("Enter your choice: ");
     int choice = Integer.parseInt(stdin.nextLine());
 
-    while (3 != choice) {
+    while (4 != choice) {
       switch (choice) {
         case 0:
           System.out.println("Generating a new RSA Key Pair...");
@@ -114,6 +121,9 @@ public class ExecuteDemo
           break;
         case 2:
           testEncryption(stdin);
+          break;
+        case 3:
+          testListJarContents(stdin);
           break;
         default:
           System.out.println("Please enter a valid integer.");
@@ -146,6 +156,23 @@ public class ExecuteDemo
       //byte[] ct = ExecuteDrm.encryptPayload(ciphertextFile, passwordGuess, initVectorGuess);
     } catch (Exception error) {
         error.printStackTrace();
+    }
+  }
+
+  private static void testListJarContents(Scanner input) {
+    try {
+      // For now, I hard-code the filename 
+      String jarFile = "STM-DRM-Client-"+VERSION_STR+".jar";
+      JarInputStream jStream = new JarInputStream(new FileInputStream(jarFile));
+      if (JarUtils.containsEncryptedData(jStream)) {
+        System.out.println("psst, hey. This JAR contains encrypted data! ;)");
+      } else {
+        System.out.println("JAR contains no encrypted data. Sorry to disappoint.");
+      }
+      // TODO: convert the file contents to bytes... presumably.
+      //byte[] ct = ExecuteDrm.encryptPayload(ciphertextFile, passwordGuess, initVectorGuess);
+    } catch (Exception error) {
+      error.printStackTrace();
     }
   }
 
