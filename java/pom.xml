@@ -158,9 +158,9 @@
                 <include>commons-logging:commons-logging</include>
 
                 <!-- bouncycastle dependencies, painstakingly discovered -->
-                <include>org.bouncycastle:bcpg-jdk18on</include>
+<!--                <include>org.bouncycastle:bcpg-jdk18on</include>
                 <include>org.bouncycastle:bcprov-jdk18on</include>
-                <include>org.bouncycastle:bcutil-jdk18on</include>
+                <include>org.bouncycastle:bcutil-jdk18on</include> -->
               </includes>
               <excludes>
                 <exclude>junit:junit</exclude>
