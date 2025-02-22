@@ -20,6 +20,8 @@ import java.util.Scanner;
 
 import java.util.jar.JarInputStream;
 
+import java.net.URISyntaxException;
+
 import java.security.KeyPair;
 
 import org.bouncycastle.gpg.SExprParser;
@@ -66,7 +68,7 @@ import chozorho.JarUtils;
 public class ExecuteDemo
 {
 
-  private static final String VERSION_STR="1.2-SNAPSHOT";
+  private static final String VERSION_STR="1.3-SNAPSHOT";
   private static final String PUBLIC_KEY_FILENAME = "example.key";
 
   
@@ -162,7 +164,7 @@ public class ExecuteDemo
   private static void testListJarContents(Scanner input) {
     try {
       // For now, I hard-code the filename 
-      String jarFile = "STM-DRM-Client-"+VERSION_STR+".jar";
+      String jarFile = getCurrentlyRunningJarName();
       JarInputStream jStream = new JarInputStream(new FileInputStream(jarFile));
       if (JarUtils.containsEncryptedData(jStream)) {
         System.out.println("psst, hey. This JAR contains encrypted data! ;)");
@@ -332,5 +334,23 @@ public class ExecuteDemo
     }
     browser.close();
   }
-}
 
+  /**
+   * Get path of the current running JAR
+   * taken from mkyong (MIT-licensed example):
+   * https://github.com/mkyong/core-java/blob/master/java-io/src/main/java/com/mkyong/io/utils/FileResourcesUtils.java#L137
+   */
+  private static String getCurrentlyRunningJarName() {
+    try {
+      return ExecuteDemo.class.getProtectionDomain()
+                              .getCodeSource()
+                              .getLocation()
+                              .toURI()
+                              .getPath();
+    } catch (URISyntaxException error) {
+      System.err.println("Could not read the name of the currently running JAR!!! Falling back to the default option (may not work!)");
+      error.printStackTrace();
+      return "STM-DRM-Client-"+VERSION_STR+".jar";
+    }
+  }
+}
