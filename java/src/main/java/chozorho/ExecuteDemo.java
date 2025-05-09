@@ -70,8 +70,9 @@ public class ExecuteDemo
 
   private static final String VERSION_STR="1.4-SNAPSHOT";
   private static final String PUBLIC_KEY_FILENAME = "example.key";
+  private static final String CIPHERTEXT_FILENAME = "Computations.class.gpg";
 
-  
+
   public static void main(String[] args)
   {
 /*    HttpClientBuilder authenticatorBuilder = HttpClientBuilder.getInstance();*/
@@ -91,7 +92,9 @@ public class ExecuteDemo
     System.out.println(" ");
     System.out.println("    3. search this JAR file for encrypted data (v 1.3)");
     System.out.println(" ");
-    System.out.println("    4. exit program");
+    System.out.println("    4. pick up a new external class file (v 1.4)");
+    System.out.println(" ");
+    System.out.println("    5. exit program");
     System.out.println(" ");
     System.out.print("Enter your choice: ");
     int choice = Integer.parseInt(stdin.nextLine());
@@ -126,6 +129,74 @@ public class ExecuteDemo
           break;
         case 3:
           testListJarContents(stdin);
+          break;
+        case 4:
+
+          // introduce variables
+          JarInputStream jStream = null;
+          PGPPrivateKey unlockedPrivKey = null;
+          String jarFile = getCurrentlyRunningJarName();
+
+          try {
+            jStream = new JarInputStream(new FileInputStream(jarFile));
+          } catch (FileNotFoundException error) {
+            System.err.println("Jar File could not be found!! Is it called "+jarFile+"?");
+            error.printStackTrace();
+          } catch (IOException error) {
+            System.err.println("Some kind of IOException occurred when reading and writing files!");
+            System.err.println("Are you sure you chose the correct file name and path?");
+            error.printStackTrace();
+          }
+
+          if (JarUtils.containsEncryptedData(jStream)) {
+            System.out.println("Please enter the location of YOUR private key (this is secret!)");
+            System.out.print("> ");
+            String privateKeyFileName = stdin.nextLine();
+            System.out.println("Please enter YOUR secret passphrase to uncover the key, or an empty string if not applicable.");
+            System.out.print("> ");
+            String passphrase = stdin.nextLine();
+            try {
+              unlockedPrivKey = ExecuteDrm.readSecretKey(privateKeyFileName, passphrase);
+            } catch (PGPException error) {
+              System.err.println("Failure to read Private Key from the given file. Are you sure you supplied the correct passphrase?");
+              error.printStackTrace();
+            } catch (FileNotFoundException error) {
+              System.err.println("Jar File could not be found!! Is it called "+jarFile+"?");
+              error.printStackTrace();
+            } catch (IOException error) {
+              System.err.println("Some kind of IOException occurred when reading and writing files!");
+              System.err.println("Are you sure you chose the correct file name and path?");
+              error.printStackTrace();
+            }
+          } else {
+            System.out.println("No encrypted classes detected. Keeping private Key as null.");
+          }
+
+          // DO NOT DELETE THIS STEP!
+          // we need to reset the jStream variable so that the classes will be re-populated
+          // before we invoke the ClassLoader.
+          try {
+            jStream = new JarInputStream(new FileInputStream(jarFile));
+          } catch (FileNotFoundException error) {
+            System.err.println("Jar File could not be found!! Is it called "+jarFile+"?");
+            error.printStackTrace();
+          } catch (IOException error) {
+            System.err.println("Some kind of IOException occurred when reading and writing files!");
+            System.err.println("Are you sure you chose the correct file name and path?");
+            error.printStackTrace();
+          }
+
+          if (JarUtils.extractEncryptZip(jStream, CIPHERTEXT_FILENAME, unlockedPrivKey)) { // TODO: don't hard-code it! intelligently find encrypted class list!
+            System.out.println("Mission successful!");
+          } else {
+            System.out.println("JarUtils could not find the class in question. Now attempting the non-gpg extension as a fallback.");
+            if (JarUtils.extractEncryptZip(jStream, "Computations.class", unlockedPrivKey)) {
+              System.out.println("Mission successful!");
+            } else {
+              System.out.println("Not a great outcome.");
+            }
+          }
+
           break;
         default:
           System.out.println("Please enter a valid integer.");
