@@ -7,5 +7,5 @@ jobs:
        - name: Perform Java build on Linux
          run: |
            sudo apt-get install -y openjdk-8-jdk maven
-           cd java  && mvn package
+           cd $(find -name java | head -n 1) && mvn package
 
