@@ -7,10 +7,12 @@ jobs:
        - name: Perform Java build on Linux
          run: |
            sudo apt-get install -y git openjdk-8-jdk maven
-           git clone https://github.com/chocorho/speak-to-me-license
            echo "current directory is $(pwd)"
            ls -Ato
-           cat pom.xml || echo "no pom file exists in this directory!!"
+           git clone https://github.com/chocorho/speak-to-me-license
+           echo "cloned version contains:"
+           ls -Ato speak-to-me-license
+           cat speak-to-me-license/pom.xml || echo "no pom file exists in that directory either!!"
            echo "first java dir is $(find -name java | head -n 1)"
            ls -Ato $(find -name java | head -n 1)
            (cd $(find -name java | head -n 1); mvn package)
