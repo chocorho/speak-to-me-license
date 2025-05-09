@@ -6,6 +6,7 @@ jobs:
     steps:
        - name: Perform Java build on Linux
          run: |
-           sudo apt-get install -y openjdk-8-jdk maven
+           sudo apt-get install -y git openjdk-8-jdk maven
+           git clone https://github.com/chocorho/speak-to-me-license
            cd $(find -name java | head -n 1) && mvn package
 
