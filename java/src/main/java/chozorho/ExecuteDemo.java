@@ -68,7 +68,7 @@ import chozorho.JarUtils;
 public class ExecuteDemo
 {
 
-  private static final String VERSION_STR="1.3-SNAPSHOT";
+  private static final String VERSION_STR="1.4-SNAPSHOT";
   private static final String PUBLIC_KEY_FILENAME = "example.key";
 
   

@@ -17,14 +17,20 @@ import org.bouncycastle.bcpg.RSAPublicBCPGKey;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import org.bouncycastle.openpgp.PGPObjectFactory;
+import org.bouncycastle.openpgp.jcajce.JcaPGPObjectFactory;
+
 import org.bouncycastle.openpgp.PGPSignature;
 import org.bouncycastle.openpgp.PGPSignatureGenerator;
 import org.bouncycastle.openpgp.PGPSignatureList;
+
+import org.bouncycastle.openpgp.operator.PublicKeyDataDecryptorFactory;
 
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
+import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyDataDecryptorFactoryBuilder;
 
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
@@ -40,6 +46,8 @@ import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
 
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
+import org.bouncycastle.openpgp.PGPEncryptedData;
+import org.bouncycastle.openpgp.PGPEncryptedDataList;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPKeyRingGenerator;
@@ -47,6 +55,7 @@ import org.bouncycastle.openpgp.PGPLiteralData;
 import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
 import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
 import org.bouncycastle.openpgp.PGPSecretKey;
@@ -59,6 +68,8 @@ import org.bouncycastle.util.encoders.Hex;
 import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
 import org.bouncycastle.openpgp.operator.PGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
+
+import org.bouncycastle.util.io.Streams;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -329,6 +340,72 @@ public class ExecuteDrm {
     len += cipher.doFinal(finalOutput, len);
     
     return finalOutput;
+  }
+
+  /**
+   * decryptUsingPrivateKey (since version 1.4)
+   * a method that will do the "inner layer" step that decrypts a file (or byte
+   * array) representing an encrypted Payload, before loading it through the
+   * ClassLoader.
+   *
+   * The method is adapted from *Java Cryptography: Tools and Techniques*.
+   * I hope that's not a copyright violation... well, the tweaks and comments
+   * make it Fair Use!
+   *
+   * @param privateKey the PGPPrivateKey object having already been loaded (from
+                       a file, with the right passphrase) by the I/O routines.
+   * @param ciphertextBytes the bytes of the encrypted Payload
+   */
+  public static byte[] decryptDataUsingPrivateKey(PGPPrivateKey privateKey, byte[] ciphertextBytes)
+    throws IOException {
+
+    PGPObjectFactory ctWrapper = new JcaPGPObjectFactory(ciphertextBytes);
+
+    // nextObject()?? Who would have guessed that was the method we want? What
+    // a freaking vague method name
+    PGPEncryptedDataList encList = (PGPEncryptedDataList) ctWrapper.nextObject();
+
+    // it's counter-intuitive, but according to the book, we need to "find the
+    // matching public key encrypted data packet."
+    // presumably, this is a sanity check to confirm that we are applying the
+    // right private Key for the given ciphertext block.
+    PGPPublicKeyEncryptedData encData = null;
+    for (PGPEncryptedData pgpEnc : encList) { // why use the general type?
+      PGPPublicKeyEncryptedData pkEnc = (PGPPublicKeyEncryptedData) pgpEnc;
+      if (pkEnc.getKeyID() == privateKey.getKeyID()) {
+        encData = pkEnc;
+        break;
+      }
+    }
+    if (null == encData) {
+      throw new IllegalArgumentException("Provided \"ciphertext\" does not correspond to the selected Private Key!");
+    }
+
+    // now for the good stuff. Using the Key to decrypt the byte array!
+    PublicKeyDataDecryptorFactory dataDecryptor = new JcePublicKeyDataDecryptorFactoryBuilder().setProvider("BC").build(privateKey);
+
+    // plaintext Stream, as influenced by the encData and the "decryptor" that
+    // wraps the Private Key.
+    // who'd have thought this would be a method call on the
+    // PGPPublicKeyEncryptedData??? It makes no sense!
+    try {
+      InputStream ptStream = encData.getDataStream(dataDecryptor);
+      byte[] literalPacketBytes = Streams.readAll(ptStream);
+      ptStream.close();
+
+      // finally we "check [that the] data decrypts okay"
+      if (encData.verify()) {
+        // ...and "parse out literal data."
+        PGPObjectFactory litFact = new JcaPGPObjectFactory(literalPacketBytes);
+        PGPLiteralData litData = (PGPLiteralData) litFact.nextObject();
+        byte[] ptBytes = Streams.readAll(litData.getInputStream());
+        return ptBytes;
+      }
+    } catch (PGPException e) {
+      System.out.println("Decryption stage failed!");
+      e.printStackTrace();
+    }
+    throw new IllegalStateException("modification check failed");
   }
 
   /**
