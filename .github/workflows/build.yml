@@ -8,5 +8,6 @@ jobs:
          run: |
            sudo apt-get install -y git openjdk-8-jdk maven
            git clone https://github.com/chocorho/speak-to-me-license
+           echo "current directory is $(pwd)"
            cd $(find -name java | head -n 1) && mvn package
 
