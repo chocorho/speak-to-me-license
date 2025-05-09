@@ -89,7 +89,7 @@ public class ExecuteDemo
     System.out.println(" ");
     System.out.println("    2. test encryption (v 2.0) to confirm receipt of the Public Key (TBA)");
     System.out.println(" ");
-    System.out.println("    3. search this JAR file for encrypted data");
+    System.out.println("    3. search this JAR file for encrypted data (v 1.3)");
     System.out.println(" ");
     System.out.println("    4. exit program");
     System.out.println(" ");
