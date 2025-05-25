@@ -99,7 +99,7 @@ public class ExecuteDemo
     System.out.print("Enter your choice: ");
     int choice = Integer.parseInt(stdin.nextLine());
 
-    while (4 != choice) {
+    while (5 != choice) {
       switch (choice) {
         case 0:
           System.out.println("Generating a new RSA Key Pair...");
