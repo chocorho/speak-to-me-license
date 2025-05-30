@@ -10,6 +10,7 @@
 
 package chozorho;
 
+import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.bcpg.BCPGOutputStream;
 import org.bouncycastle.bcpg.BCPGInputStream;
@@ -166,19 +167,19 @@ public class ExecuteDrm {
   }
 
   /**
-  * Generate an encapsulated signed file.
-  *
-  * @param fileName
-  * 
-  * @param out
-  * @param pass
-  * @param armor
-  * @throws IOException
-  * @throws NoSuchAlgorithmException
-  * @throws NoSuchProviderException
-  * @throws PGPException
-  * @throws SignatureException
-  */
+   * Generate an encapsulated signed file.
+   *
+   * @param fileName
+   * 
+   * @param out
+   * @param pass
+   * @param armor
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   * @throws NoSuchProviderException
+   * @throws PGPException
+   * @throws SignatureException
+   */
   public static void signFile(
       String          fileName,
       //InputStream     keyIn,
@@ -242,6 +243,7 @@ public class ExecuteDrm {
     }
   }
 
+
   /**
    * testAes
    * "A simple example of AES in CBC mode with block aligned padding."
@@ -272,6 +274,7 @@ public class ExecuteDrm {
     System.out.println("decrypted: "
                        + Hex.toHexString(Arrays.copyOfRange(finalOutput, 0, len)));
   }
+
 
   /**
    * encryptPayload
@@ -306,6 +309,7 @@ public class ExecuteDrm {
     cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
     return cipher.doFinal(payloadPlaintext);
   }
+
 
   /**
    * decryptPayload
@@ -407,6 +411,77 @@ public class ExecuteDrm {
     }
     throw new IllegalStateException("modification check failed");
   }
+
+
+  /**
+   * decryptUsingPrivateKey (since version 1.4)
+   * a method that will do the "inner layer" step that decrypts a file (or byte
+   * array) representing an encrypted Payload, before loading it through the
+   * ClassLoader.
+   *
+   * The method is adapted from *Java Cryptography: Tools and Techniques*.
+   * I hope that's not a copyright violation... well, the tweaks and comments
+   * make it Fair Use!
+   *
+   * @param privateKey the PGPPrivateKey object having already been loaded (from
+                       a file, with the right passphrase) by the I/O routines.
+   * @param ciphertextBytes the bytes of the encrypted Payload
+   */
+  public static byte[] decryptDataUsingPrivateKey(PGPPrivateKey privateKey, InputStream ciphertextBytes, boolean armor)
+    throws IOException {
+
+    if (armor) {
+      ciphertextBytes = new ArmoredInputStream(ciphertextBytes);
+    }
+    PGPObjectFactory ctWrapper = new JcaPGPObjectFactory(ciphertextBytes);
+
+    // nextObject()?? Who would have guessed that was the method we want? What
+    // a freaking vague method name
+    PGPEncryptedDataList encList = (PGPEncryptedDataList) ctWrapper.nextObject();
+
+    // it's counter-intuitive, but according to the book, we need to "find the
+    // matching public key encrypted data packet."
+    // presumably, this is a sanity check to confirm that we are applying the
+    // right private Key for the given ciphertext block.
+    PGPPublicKeyEncryptedData encData = null;
+    for (PGPEncryptedData pgpEnc : encList) { // why use the general type?
+      PGPPublicKeyEncryptedData pkEnc = (PGPPublicKeyEncryptedData) pgpEnc;
+      if (pkEnc.getKeyID() == privateKey.getKeyID()) {
+        encData = pkEnc;
+        break;
+      }
+    }
+    if (null == encData) {
+      throw new IllegalArgumentException("Provided \"ciphertext\" does not correspond to the selected Private Key!");
+    }
+
+    // now for the good stuff. Using the Key to decrypt the byte array!
+    PublicKeyDataDecryptorFactory dataDecryptor = new JcePublicKeyDataDecryptorFactoryBuilder().setProvider("BC").build(privateKey);
+
+    // plaintext Stream, as influenced by the encData and the "decryptor" that
+    // wraps the Private Key.
+    // who'd have thought this would be a method call on the
+    // PGPPublicKeyEncryptedData??? It makes no sense!
+    try {
+      InputStream ptStream = encData.getDataStream(dataDecryptor);
+      byte[] literalPacketBytes = Streams.readAll(ptStream);
+      ptStream.close();
+
+      // finally we "check [that the] data decrypts okay"
+      if (encData.verify()) {
+        // ...and "parse out literal data."
+        PGPObjectFactory litFact = new JcaPGPObjectFactory(literalPacketBytes);
+        PGPLiteralData litData = (PGPLiteralData) litFact.nextObject();
+        byte[] ptBytes = Streams.readAll(litData.getInputStream());
+        return ptBytes;
+      }
+    } catch (PGPException e) {
+      System.out.println("Decryption stage failed!");
+      e.printStackTrace();
+    }
+    throw new IllegalStateException("modification check failed");
+  }
+
 
   /**
    * readRsaKey

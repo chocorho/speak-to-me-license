@@ -6,7 +6,7 @@
 
   <groupId>com.themathjester</groupId>
   <artifactId>STM-DRM-Client</artifactId>
-  <version>1.4-SNAPSHOT</version>
+  <version>1.5-SNAPSHOT</version>
 
   <name>Speak-To-Me-DRM-Demo</name>
   <url>http://www.themathjester.com</url>
@@ -151,6 +151,7 @@
                 <include>org.seleniumhq.selenium:selenium-api</include>
                 <include>org.seleniumhq.selenium:selenium-remote-driver</include>
                 <include>org.seleniumhq.selenium:selenium-http</include> <!-- do we need it here? Evidently yes! -->
+                <include>org.seleniumhq.selenium:selenium-support</include> <!-- required for the dropdown menu "Select" object (ver. 1.5) -->
                 <include>dev.failsafe:failsafe</include>
                 <include>org.seleniumhq.selenium:selenium-json</include> <!-- do we need it here? Evidently yes! -->
                 <include>org.seleniumhq.selenium:selenium-manager</include> <!-- do we need it here? Evidently yes! -->

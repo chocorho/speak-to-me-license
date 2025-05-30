@@ -12,6 +12,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.ByteArrayInputStream;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
@@ -56,6 +57,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.By.ByTagName;*/
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.WebElement;
 /*import org.openqa.selenium.remote.RemoteWebElement;*/
 
@@ -68,7 +70,7 @@ import chozorho.JarUtils;
 public class ExecuteDemo
 {
 
-  private static final String VERSION_STR="1.4-SNAPSHOT";
+  private static final String VERSION_STR="1.5-SNAPSHOT";
   private static final String PUBLIC_KEY_FILENAME = "example.key";
   private static final String CIPHERTEXT_FILENAME = "Computations.class.gpg";
 
@@ -84,22 +86,27 @@ public class ExecuteDemo
     System.out.println(" ");
     System.out.println("As of August 2024, this program comes with options for convenience to the user.");
     System.out.println(" ");
-    System.out.println("    0. generate a new RSA Key Pair (this is typically the first step to unlocking the DRM)");
+    System.out.println("    0. generate a new RSA Key Pair (v 1.1, typically the first step to unlocking the DRM)");
     System.out.println(" ");
     System.out.println("    1. use binary signatures (v 1.0) to confirm receipt of the Public Key");
     System.out.println(" ");
-    System.out.println("    2. test encryption (v 2.0) to confirm receipt of the Public Key (TBA)");
+    System.out.println("    2. test encryption (v 2.0) to confirm receipt of the Public Key (WIP, only does an AES demo)");
     System.out.println(" ");
     System.out.println("    3. search this JAR file for encrypted data (v 1.3)");
     System.out.println(" ");
     System.out.println("    4. pick up a new external class file (v 1.4)");
     System.out.println(" ");
-    System.out.println("    5. exit program");
+    System.out.println("    5. generate a new Kyber Key to allow quantum-resistant cryptography (v. 1.5)");
+    System.out.println(" ");
+    System.out.println("    6. test encrypted passphrase retrieval (and decryption) (v. 1.5)");
+    System.out.println(" ");
+    System.out.println("    7. exit program");
     System.out.println(" ");
     System.out.print("Enter your choice: ");
+
     int choice = Integer.parseInt(stdin.nextLine());
 
-    while (5 != choice) {
+    while (7 != choice) {
       switch (choice) {
         case 0:
           System.out.println("Generating a new RSA Key Pair...");
@@ -198,6 +205,25 @@ public class ExecuteDemo
           }
 
           break;
+        case 5:
+          System.out.println("Generating a new CRYSTALS-KYBER Key Pair...");
+          System.out.print("Enter the name for the new pair: ");
+          String kyberName = stdin.nextLine();
+          System.out.print("Enter your secret passphrase: ");
+          String kyberPassphrase = stdin.nextLine();
+          try {
+            FileOutputStream pubFile = new FileOutputStream(kyberName+"-kyber-PRIVATE-DO-NOT-SHARE.asc");
+            FileOutputStream privFile = new FileOutputStream(kyberName+"-kyber-pub.asc");
+            // keyInUse = ExecuteDrm.createNewKyberKey(pubFile, privFile, kyberName, kyberPassphrase.toCharArray(), true); // closes the streams for us!
+          } catch (Exception ec) {
+            ec.printStackTrace();
+          }
+          break;
+        case 6:
+          System.out.println("Testing reception of a new passphrase...");
+          getNewPassphrase(stdin);
+          break;
+
         default:
           System.out.println("Please enter a valid integer.");
           break;
@@ -405,6 +431,111 @@ public class ExecuteDemo
     }
     browser.close();
   }
+
+  /**
+   * getNewPassphrase
+   *
+   * This is the hallmark of version 1.5.
+   * Notice that it is most comparable to the "uploadSignatures"
+   * method, because it contacts the server and operates under the
+   * assumption that you have ALREADY Spoken To Chozorho and had your
+   * public Key added to the server-side database.
+   *
+   * Have you done that yet?
+   *
+   * You really should do it.
+   *
+   * It's never too late!
+   *
+   * Postcondition: Retrieves a new randomized passphrase and
+   * re-encrypts the Payload to "continue the cycle" of decrypt, run,
+   * encrypt, repeat." This method keeps it difficult to copy the
+   * program and give two different users the ability to run it
+   * independently.
+   *
+   */
+  private static void getNewPassphrase(Scanner input) {
+    FirefoxOptions customGeckoOpt = new FirefoxOptions();
+    customGeckoOpt.addArguments("--headless");
+    
+    FirefoxDriver browser = new FirefoxDriver(customGeckoOpt);
+    
+    Calendar today_date = Calendar.getInstance();
+    Date timestamp = today_date.getTime();
+    System.out.println("Please enter the location of YOUR private key (this is secret!)");
+    System.out.print("> ");
+    String privateKeyFileName = input.nextLine();
+    System.out.println("Please enter YOUR secret passphrase to uncover the key, or an empty string if not applicable.");
+    System.out.print("> ");
+    String passphrase = input.nextLine();
+    System.out.println("Please enter YOUR username that you sent (or received) from the Lead Developer.");
+    System.out.print("> ");
+    String username = input.nextLine();
+    
+    browser.get("https://www.themathjester.com/get_new_passphrase.php");
+    List<WebElement> sources = browser.findElements(new By.ByTagName("select"));
+    for (WebElement e : sources) {
+      Select recipientSelectionHtml = new Select(e);
+      recipientSelectionHtml.selectByValue(username);
+      // if this fails, try recipientSelectionHtml.selectByVisibleText(username);
+    }
+    
+    /* step 2. receive the new passphrase. */
+    byte[] cipherTextWithArmor = new byte[9999];
+
+    /* 2.(a). click submit early this time */
+    browser.findElement(new By.ById("submitBinary")).click();
+    
+    System.out.print(browser.getPageSource());
+    
+    /* 2.(b) collect the ciphertext all together in one place, eh? */
+    boolean drmFails = true;
+    List<WebElement> headings = browser.findElements(new By.ByTagName("code"));
+    for (WebElement e : headings) {
+      if (e.getAttribute("class").equalsIgnoreCase("cipherText")) {
+        System.out.println("The encrypted passphrase THIS TIME appears to be:");
+        System.out.println(e.getText());
+        cipherTextWithArmor = e.getText().getBytes(); // TODO: specify a charset if needed?
+        drmFails = false;
+      }
+    }
+
+    /* step 3. do decryption, using any and all necessary BouncyCastle PGP objects */
+    
+    try {
+      
+      if (drmFails) {
+        System.out.println("Fatal Error: DRM check failed!");
+        System.out.println("");
+        System.out.println("chozorho is sick and tired of people refusing to talk to him about technical topics.");
+        System.out.println("Therefore, in order to run this software, you must abide by the attached Speak-To-Me License.");
+        System.out.println("That is, you must contact chozorho directly ahead of time.");
+        System.out.println("Send him your public key in order to become an authorized user!");
+      } else {
+
+        // step 3.(a) extract the private Key.
+        // thank G*D I found a separate method to do this step and made it public.
+        PGPPrivateKey extractedPrivKey = ExecuteDrm.readSecretKey(privateKeyFileName, passphrase);
+
+        System.out.println("which appears to decrypt to:");
+        ByteArrayInputStream cipherTextStream = new ByteArrayInputStream(cipherTextWithArmor);
+        byte[] resultingPlainText = ExecuteDrm.decryptDataUsingPrivateKey(extractedPrivKey, cipherTextStream, true);
+        for (byte nByte : resultingPlainText) {
+          System.out.print((char) ((int) nByte));
+        }
+        System.out.println();
+      }
+    } catch (org.bouncycastle.openpgp.PGPException err) {
+      System.out.println("all roads lead to oblivion.");
+    } catch (IOException ioError) {
+      System.out.println(ioError.toString());
+      ioError.printStackTrace();
+    } finally {
+      browser.close();
+    }
+  }
+
+
 
   /**
    * Get path of the current running JAR
