@@ -414,18 +414,24 @@ public class ExecuteDrm {
 
 
   /**
-   * decryptUsingPrivateKey (since version 1.4)
-   * a method that will do the "inner layer" step that decrypts a file (or byte
-   * array) representing an encrypted Payload, before loading it through the
-   * ClassLoader.
+   * decryptUsingPrivateKey (since version 1.5)
+   * this variant of the above method allows me to efficiently decrypt a _short
+   * English passphrase_, rather than an entire file or chunk of bytecode.
    *
-   * The method is adapted from *Java Cryptography: Tools and Techniques*.
-   * I hope that's not a copyright violation... well, the tweaks and comments
-   * make it Fair Use!
+   * This will (surely) prove useful if and when the Client asks to "reset his
+   * password," because it will be encrypted (using either Kyber or RSA) and
+   * promptly sent to the user in an ASCII-armored format.
+   * Notice the method signature has been altered accordingly. Also notice that
+   * it hinges on the fact that the JcaPGPObjectFactory has two Constructors:
+   * one using a byte array directly and another that accepts an Input Stream.
+   * Pretty impressive, eh? We ought to thank those BouncyCastle devs once more.
    *
    * @param privateKey the PGPPrivateKey object having already been loaded (from
                        a file, with the right passphrase) by the I/O routines.
-   * @param ciphertextBytes the bytes of the encrypted Payload
+   * @param ciphertextBytes an input Stream the encrypted passphrase
+   * @param armor a boolean flag to allow reading ASCII-armoured input (which,
+                  at time of writing, we expect to be true every time this
+                  method is called!)
    */
   public static byte[] decryptDataUsingPrivateKey(PGPPrivateKey privateKey, InputStream ciphertextBytes, boolean armor)
     throws IOException {
