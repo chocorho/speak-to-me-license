@@ -1,0 +1,20 @@
+name: maven-actions
+on: push
+jobs:
+  confirm_build_passes:
+    runs-on: ubuntu-latest
+    steps:
+       - name: Perform Java build on Linux
+         run: |
+           sudo apt-get install -y git openjdk-8-jdk maven
+           echo "current directory is $(pwd)"
+           ls -Ato
+           git clone https://github.com/chocorho/speak-to-me-license
+           (cd speak-to-me-license; git checkout add-java-demo)
+           echo "cloned version contains:"
+           ls -Ato speak-to-me-license
+           cat speak-to-me-license/pom.xml || echo "no pom file exists in that directory either!!"
+           echo "first java dir is $(find -name java | head -n 1)"
+           ls -Ato $(find -name java | head -n 1)
+           (cd $(find -name java | head -n 1); mvn package)
+

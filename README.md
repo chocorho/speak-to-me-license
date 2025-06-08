@@ -47,6 +47,18 @@ MAJOR CONTRIBUTORS
 ...
 ```
 
+# Demo Implementations
+
+## Java 1.8
+
+For the Java implementation, I am using dependencies licensed under Apache-2.0, including Selenium, and the MIT License, such as BouncyCastle. Therefore, in order to **run** the java client (which may have been uploaded as a Release on GitHub by the time you read this), you will likely need to download the **Bouncy Castle** JAR files, namely `bcutil-jdk18on-1.79.jar`, `bcpg-jdk18on-1.79.jar`, and `bcprov-jdk18on-1.79.jar`. If you cannot find them on the [BouncyCastle website](https://www.bouncycastle.org/download/bouncy-castle-java/?filter=java%3Drelease-1-79), you may try [themathjester](https://www.themathjester.com/common/?C=M;O=D) as a backup... for as long as I keep that domain.
+
+Then, at the command prompt, you will want to ensure that these three bouncycastle JAR files are on the runtime classpath, e.g. by running the following:
+
+```
+java -cp . -jar STM-DRM-Client-1.3-SNAPSHOT.jar
+```
+
 # Contact
 
 chocorho -- allLogarithmsEqual@protonmail.com
