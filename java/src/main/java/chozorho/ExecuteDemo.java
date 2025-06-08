@@ -168,7 +168,7 @@ public class ExecuteDemo
               System.err.println("Failure to read Private Key from the given file. Are you sure you supplied the correct passphrase?");
               error.printStackTrace();
             } catch (FileNotFoundException error) {
-              System.err.println("Jar File could not be found!! Is it called "+jarFile+"?");
+              System.err.println("Private Key File could not be found!! Is it called "+jarFile+"?");
               error.printStackTrace();
             } catch (IOException error) {
               System.err.println("Some kind of IOException occurred when reading and writing files!");
